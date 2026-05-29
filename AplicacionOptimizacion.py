@@ -53,9 +53,9 @@ if st.button("Ejecutar Optimización"):
             hessian_sym = [[sp.diff(g, var) for var in vars_sym] for g in grad_sym]
             
             # Convertir a funciones numéricas de NumPy (Mucho más rápidas)
-            f_num = sp.lambdify([vars_sym], f_sym, 'numpy')
-            grad_num = sp.lambdify([vars_sym], grad_sym, 'numpy')
-            hessian_num = sp.lambdify([vars_sym], hessian_sym, 'numpy')
+            f_num = sp.lambdify(vars_sym, f_sym, 'numpy')
+            grad_num = sp.lambdify(vars_sym, grad_sym, 'numpy')
+            hessian_num = sp.lambdify(vars_sym, hessian_sym, 'numpy')
             
             # Envoltorios para manejar los arrays correctamente
             def f_eval(x): return float(f_num(*x))
