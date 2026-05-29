@@ -159,7 +159,7 @@ if st.button("Ejecutar Optimización"):
         
         # --- VALOR AGREGADO 1: MATEMÁTICA SIMBÓLICA ---
         st.markdown("---")
-        st.subheader("Análisis Matemático (Valor Agregado)")
+        st.subheader("Análisis Matemático")
         st.write("La aplicación dedujo las siguientes expresiones utilizando diferenciación automática:")
         col_math1, col_math2 = st.columns(2)
         with col_math1:
