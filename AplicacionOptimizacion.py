@@ -29,6 +29,17 @@ st.sidebar.subheader("Parámetros de Wolfe")
 c1 = st.sidebar.slider("Parámetro c1 (Armijo)", 0.0001, 0.5, 1e-4, format="%.4f")
 c2 = st.sidebar.slider("Parámetro c2 (Curvatura)", c1, 0.99, 0.9)
 
+# --- NUEVO: SLIDER EN LA BARRA LATERAL ---
+st.sidebar.subheader("Visualización de Tabla")
+rango_tabla = st.sidebar.slider(
+    "Rango de iteraciones a mostrar:",
+    min_value=0,
+    max_value=int(max_iter), # El máximo ahora es el límite de iteraciones
+    value=(0, min(20, int(max_iter)))
+)
+min_iter_visual = rango_tabla[0]
+max_iter_visual = rango_tabla[1]
+
 # --- LÓGICA DE EJECUCIÓN ---
 if st.button("Ejecutar Optimización"):
     try:
@@ -165,15 +176,10 @@ if st.button("Ejecutar Optimización"):
             df_historial[f"x{i+1}"] = df_historial["x"].apply(lambda coord: coord[i])
         df_historial = df_historial.drop(columns=["x"]) # Quitamos la columna original del array
         
-        # Slider para filtrar
-        min_iter, max_iter = st.slider(
-            "Selecciona el rango de iteraciones a visualizar:",
-            min_value=0,
-            max_value=iters_realizadas,
-            value=(0, min(20, iters_realizadas))
-        )
+        # Aplicamos el filtro usando las variables obtenidas del slider en la barra lateral
+        tabla_filtrada = df_historial[(df_historial["Iteración"] >= min_iter_visual) & (df_historial["Iteración"] <= max_iter_visual)]
         
-        tabla_filtrada = df_historial[(df_historial["Iteración"] >= min_iter) & (df_historial["Iteración"] <= max_iter)]
+        # Mostrar la tabla
         st.dataframe(tabla_filtrada, hide_index=True, use_container_width=True)
 
     except Exception as e:
