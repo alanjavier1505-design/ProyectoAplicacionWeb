@@ -9,6 +9,21 @@ import pandas as pd
 st.set_page_config(page_title="Optimizador de Funciones", layout="wide")
 st.title("Calculadora de Optimización No Lineal")
 
+# --- MEMORIA DE LA PÁGINA (SESSION STATE) ---
+# Inicializa las variables en memoria para que los botones controlen la barra lateral
+if 'n_vars' not in st.session_state:
+    st.session_state.n_vars = 2
+if 'func_str' not in st.session_state:
+    st.session_state.func_str = "x1**2 + x2**2"
+if 'p0_str' not in st.session_state:
+    st.session_state.p0_str = "5.0, 5.0"
+
+# Función callback que se ejecuta al presionar un botón del manual
+def cargar_ejemplo(n, f, p):
+    st.session_state.n_vars = n
+    st.session_state.func_str = f
+    st.session_state.p0_str = p
+
 # --- MANUAL DE USUARIO (PLEGABLE) ---
 with st.expander("📖 Manual de Uso: ¿Cómo escribir las funciones matemáticas?"):
     st.markdown("""
@@ -20,25 +35,47 @@ with st.expander("📖 Manual de Uso: ¿Cómo escribir las funciones matemática
     * **Potencias:** Usa doble asterisco `**`. **No** escribas el número al lado (ej: `x12`). Escribe `x1**2` para referirte a $x_1^2$.
     * **Exponencial (Euler):** Usa `exp()`. Ej: `exp(-x1**2)` para referirte a $e^{-x_1^2}$.
     * **Trigonometría:** Usa `sin(x)`, `cos(x)`, `tan(x)`.
-
-    **Ejemplos de funciones de prueba clásicas:**
-    * **Función Cuadrática simple:** `x1**2 + x2**2`
-    * **Función de Rosenbrock:** `(1 - x1)**2 + 100*(x2 - x1**2)**2`
-    * **Función de Booth:** `(x1 + 2*x2 - 7)**2 + (2*x1 + x2 - 5)**2`
-    * **Pozo de Gauss (con Euler):** `-exp(-x1**2 - x2**2)`
     """)
+    st.markdown("---")
+    st.markdown("**Ejemplos de funciones de prueba clásicas (Haz clic para cargar en el panel izquierdo):**")
+    
+    # Columnas interactivas para alinear texto y botones perfectamente
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.write("🔹 **Función Cuadrática simple:** `x1**2 + x2**2`")
+    with col2:
+        st.button("Probar Cuadrática", on_click=cargar_ejemplo, args=(2, "x1**2 + x2**2", "5.0, 5.0"), use_container_width=True)
+    
+    col3, col4 = st.columns([3, 1])
+    with col3:
+        st.write("🔹 **Función de Rosenbrock:** `(1 - x1)**2 + 100 * (x2 - x1**2)**2`")
+    with col4:
+        st.button("Probar Rosenbrock", on_click=cargar_ejemplo, args=(2, "(1 - x1)**2 + 100 * (x2 - x1**2)**2", "-1.2, 1.0"), use_container_width=True)
+        
+    col5, col6 = st.columns([3, 1])
+    with col5:
+        st.write("🔹 **Función de Booth:** `(x1 + 2*x2 - 7)**2 + (2*x1 + x2 - 5)**2`")
+    with col6:
+        st.button("Probar Booth", on_click=cargar_ejemplo, args=(2, "(x1 + 2*x2 - 7)**2 + (2*x1 + x2 - 5)**2", "0.0, 0.0"), use_container_width=True)
+
+    col7, col8 = st.columns([3, 1])
+    with col7:
+        st.write("🔹 **Pozo de Gauss (con Euler):** `-exp(-x1**2 - x2**2)`")
+    with col8:
+        st.button("Probar Gauss", on_click=cargar_ejemplo, args=(2, "-exp(-x1**2 - x2**2)", "1.0, 1.0"), use_container_width=True)
 
 # --- BARRA LATERAL: DATOS DE ENTRADA ---
 st.sidebar.header("Parámetros de Entrada")
 
-num_vars = st.sidebar.number_input("Número de variables", min_value=1, max_value=10, value=2)
+# Vinculamos los widgets directamente a las llaves creadas en session_state usando el argumento 'key'
+num_vars = st.sidebar.number_input("Número de variables", min_value=1, max_value=10, key="n_vars")
 metodo = st.sidebar.selectbox("Método de Optimización", 
                               ["Gradiente Descendente", "Gradiente Conjugado", "Método de Newton"])
 
 # Pequeña ayuda visual en el input
 st.sidebar.markdown("<small>Ej: x1**2 + x2**2, exp(-x1**2)</small>", unsafe_allow_html=True)
-funcion_str = st.sidebar.text_input("Función objetivo f(x)", value="x1**2 + x2**2")
-punto_inicio = st.sidebar.text_input("Punto de partida (separado por comas)", value="5.0, 5.0")
+funcion_str = st.sidebar.text_input("Función objetivo f(x)", key="func_str")
+punto_inicio = st.sidebar.text_input("Punto de partida (separado por comas)", key="p0_str")
 
 st.sidebar.subheader("Criterios de Parada")
 max_iter = st.sidebar.number_input("Número máximo de iteraciones", min_value=1, value=100)
@@ -50,7 +87,7 @@ alpha_min = st.sidebar.number_input("Alfa Mínimo (α min)", min_value=1e-9, max
 c1 = st.sidebar.slider("Parámetro c1 (Armijo)", 0.0001, 0.5, 1e-4, format="%.4f")
 c2 = st.sidebar.slider("Parámetro c2 (Curvatura)", c1, 0.99, 0.9)
 
-# --- NUEVO: SLIDER EN LA BARRA LATERAL ---
+# --- SLIDER EN LA BARRA LATERAL ---
 st.sidebar.subheader("Visualización de Tabla")
 rango_tabla = st.sidebar.slider(
     "Rango de iteraciones a mostrar:",
