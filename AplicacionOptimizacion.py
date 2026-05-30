@@ -12,7 +12,7 @@ st.title("Calculadora de Optimización No Lineal")
 # --- MANUAL DE USUARIO (PLEGABLE) ---
 with st.expander("📖 Manual de Uso: ¿Cómo escribir las funciones matemáticas?"):
     st.markdown("""
-    Para que la calculadora entienda correctamente tu función objetivo, debes usar la notación estándar de programación en Python. Aquí tienes una guía rápida:
+    Para que la calculadora entienda correctamente tu función objetivo, debes usar la notación estándar asignada a esta calculadora. Aquí tienes una guía rápida:
 
     * **Variables:** Usa `x1`, `x2`, `x3`, etc.
     * **Sumas y restas:** Usa `+` y `-` (Ej: `x1 + x2`)
