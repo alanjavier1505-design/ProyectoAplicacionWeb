@@ -33,6 +33,11 @@ with st.expander("📖 Manual de Uso: ¿Cómo escribir las funciones matemática
     * **Potencias:** Usa doble asterisco `**`. **No** escribas el número al lado (ej: `x12`). Escribe `x1**2` para referirte a $x_1^2$.
     * **Exponencial (Euler):** Usa `exp()`. Ej: `exp(-x1**2)` para referirte a $e^{-x_1^2}$.
     * **Trigonometría:** Usa `sin(x)`, `cos(x)`, `tan(x)`.
+    * **Logaritmos:**
+        * Logaritmo natural (base $e$): usa `log(x)`. Ej: `log(x1)` para referirte a $\\ln(x_1)$.
+        * Logaritmo base 10: usa `log(x, 10)`. Ej: `log(x1, 10)` para referirte a $\\log_{10}(x_1)$.
+        * Logaritmo base 2: usa `log(x, 2)`. Ej: `log(x1, 2)` para referirte a $\\log_2(x_1)$.
+        * ⚠️ El argumento del logaritmo debe ser **estrictamente positivo**. Asegúrate de que el punto de partida y la trayectoria no pasen por valores ≤ 0.
     """)
     st.markdown("---")
     st.markdown("**Ejemplos de funciones de prueba clásicas (Haz clic para cargar en el panel izquierdo):**")
@@ -205,9 +210,7 @@ if st.button("Ejecutar Optimización"):
                           yaxis_title="Error", yaxis_type="log") 
         st.plotly_chart(fig, use_container_width=True)
 
-        # ---------------------------------------------------------------
-        # NUEVO: MAPA DE CONTORNO CON TRAYECTORIA (solo para 2 variables)
-        # ---------------------------------------------------------------
+        # --- MAPA DE CONTORNO CON TRAYECTORIA (solo para 2 variables) ---
         if num_vars == 2:
             st.markdown("---")
             st.subheader("🗺️ Mapa de Contorno con Trayectoria")
@@ -216,7 +219,6 @@ if st.button("Ejecutar Optimización"):
             x1_tray = tray[:, 0]
             x2_tray = tray[:, 1]
 
-            # Calcular rango del contorno con margen alrededor de la trayectoria
             margen = max(abs(x0[0] - x_k[0]), abs(x0[1] - x_k[1])) * 0.4 + 1.5
             x1_min = min(x1_tray.min(), x_k[0]) - margen
             x1_max = max(x1_tray.max(), x_k[0]) + margen
@@ -236,7 +238,6 @@ if st.button("Ejecutar Optimización"):
                     except Exception:
                         Z[i, j] = np.nan
 
-            # Limitar valores extremos para que el contorno sea legible
             z_finite = Z[np.isfinite(Z)]
             if len(z_finite) > 0:
                 z_p5  = np.percentile(z_finite, 2)
@@ -245,7 +246,6 @@ if st.button("Ejecutar Optimización"):
 
             fig_contour = go.Figure()
 
-            # Capa 1: superficie de contorno rellena
             fig_contour.add_trace(go.Contour(
                 x=x1_grid, y=x2_grid, z=Z,
                 colorscale='RdYlGn_r',
@@ -254,7 +254,6 @@ if st.button("Ejecutar Optimización"):
                 name='f(x1, x2)'
             ))
 
-            # Capa 2: trayectoria del algoritmo
             fig_contour.add_trace(go.Scatter(
                 x=x1_tray, y=x2_tray,
                 mode='lines+markers',
@@ -264,7 +263,6 @@ if st.button("Ejecutar Optimización"):
                 name='Trayectoria'
             ))
 
-            # Capa 3: punto de inicio
             fig_contour.add_trace(go.Scatter(
                 x=[x0[0]], y=[x0[1]],
                 mode='markers+text',
@@ -276,7 +274,6 @@ if st.button("Ejecutar Optimización"):
                 name='Punto de inicio'
             ))
 
-            # Capa 4: punto final (mínimo encontrado)
             fig_contour.add_trace(go.Scatter(
                 x=[x_k[0]], y=[x_k[1]],
                 mode='markers+text',
@@ -301,9 +298,7 @@ if st.button("Ejecutar Optimización"):
         else:
             st.info("ℹ️ El mapa de contorno está disponible solo para funciones de 2 variables.")
 
-        # ---------------------------------------------------------------
-        # NUEVO: CLASIFICACIÓN AUTOMÁTICA DEL PUNTO CRÍTICO
-        # ---------------------------------------------------------------
+        # --- CLASIFICACIÓN AUTOMÁTICA DEL PUNTO CRÍTICO ---
         st.markdown("---")
         st.subheader("🔬 Clasificación del Punto Crítico")
 
@@ -355,7 +350,6 @@ if st.button("Ejecutar Optimización"):
             color_box = "info"
             explicacion = "No se pudo clasificar el punto crítico con la información disponible."
 
-        # Mostrar clasificación
         if color_box == "success":
             st.success(f"**Tipo de punto crítico:** {tipo}")
         elif color_box == "warning":
@@ -367,7 +361,6 @@ if st.button("Ejecutar Optimización"):
 
         st.markdown(explicacion)
 
-        # Tabla de valores propios y métricas del Hessiano
         col_h1, col_h2, col_h3 = st.columns(3)
         col_h1.metric("Determinante det(H)", f"{det_H:.4e}")
         col_h2.metric("Traza tr(H)", f"{traza_H:.4e}")
