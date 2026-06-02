@@ -155,20 +155,25 @@ if st.button("Ejecutar Optimización"):
                         p_k = np.dot(np.linalg.pinv(H_k), -g_k)
                         
                 elif metodo == "Gradiente Conjugado":
-                    if k == 0:
+                    if k == 0 or k % num_vars == 0:
+                        # Reinicio periódico cada n iteraciones para estabilidad
+                        # en funciones no cuadráticas
                         p_k = -g_k
                     else:
-                        beta_k = np.dot(g_k, g_k) / np.dot(g_old, g_old)
+                        # Polak-Ribière con max(0, beta) para garantizar descenso
+                        denom = np.dot(g_old, g_old)
+                        if denom < 1e-30:
+                            beta_k = 0.0
+                        else:
+                            beta_k = max(0.0, np.dot(g_k, g_k - g_old) / denom)
                         p_k = -g_k + beta_k * p_old
-                
-                p_busqueda = p_k * alpha_init
-                
-                res_alpha = line_search(f_eval, grad_eval, x_k, p_busqueda, gfk=g_k, old_fval=f_k, c1=c1, c2=c2)
+
+                # FIX: se pasa p_k directamente sin escalar por alpha_init
+                # line_search ya maneja el tamaño de paso internamente
+                res_alpha = line_search(f_eval, grad_eval, x_k, p_k, gfk=g_k, old_fval=f_k, c1=c1, c2=c2)
                 alpha_k = res_alpha[0]
-                
-                if alpha_k is not None:
-                    alpha_k = alpha_k * alpha_init
-                
+
+                # FIX: se elimina el doble escalado alpha_k * alpha_init
                 if alpha_k is None or alpha_k < alpha_min:
                     alpha_k = alpha_min
                     
@@ -178,9 +183,9 @@ if st.button("Ejecutar Optimización"):
                 iters_realizadas += 1
                 error_final = error_actual
 
-        # --- RESULTADOS ESPERADOS ---
+        # --- RESULTADOS ---
         st.success("✅ Optimización finalizada con éxito.")
-        st.balloons()  # 🎉 AQUÍ ESTÁ LA ANIMACIÓN DE CELEBRACIÓN
+        st.balloons()
         
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Punto mínimo (x*)", f"[{', '.join([f'{x:.4f}' for x in x_k])}]")
@@ -200,7 +205,7 @@ if st.button("Ejecutar Optimización"):
                           yaxis_title="Error", yaxis_type="log") 
         st.plotly_chart(fig, use_container_width=True)
         
-        # --- VALOR AGREGADO 1: MATEMÁTICA SIMBÓLICA ---
+        # --- MATEMÁTICA SIMBÓLICA ---
         st.markdown("---")
         st.subheader("🧬 Análisis Matemático Avanzado")
         st.write("La aplicación dedujo las siguientes expresiones utilizando diferenciación automática:")
@@ -210,7 +215,7 @@ if st.button("Ejecutar Optimización"):
         with col_math2:
             st.latex(r"H(x) = " + sp.latex(hessian_sym))
             
-        # --- VALOR AGREGADO 2: HISTORIAL FILTRABLE ---
+        # --- HISTORIAL FILTRABLE ---
         st.markdown("---")
         st.subheader("📋 Historial de Iteraciones")
         
