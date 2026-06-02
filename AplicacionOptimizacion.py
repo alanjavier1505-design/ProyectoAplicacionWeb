@@ -121,6 +121,7 @@ if st.button("Ejecutar Optimización"):
 
             x_k = x0.copy()
             historial_datos = []
+            trayectoria_x = []
             
             p_old = None
             g_old = None
@@ -132,6 +133,8 @@ if st.button("Ejecutar Optimización"):
                 g_k = grad_eval(x_k)
                 f_k = f_eval(x_k)
                 error_actual = np.linalg.norm(g_k)
+                
+                trayectoria_x.append(x_k.copy())
                 
                 historial_datos.append({
                     "Iteración": k,
@@ -156,11 +159,8 @@ if st.button("Ejecutar Optimización"):
                         
                 elif metodo == "Gradiente Conjugado":
                     if k == 0 or k % num_vars == 0:
-                        # Reinicio periódico cada n iteraciones para estabilidad
-                        # en funciones no cuadráticas
                         p_k = -g_k
                     else:
-                        # Polak-Ribière con max(0, beta) para garantizar descenso
                         denom = np.dot(g_old, g_old)
                         if denom < 1e-30:
                             beta_k = 0.0
@@ -168,12 +168,9 @@ if st.button("Ejecutar Optimización"):
                             beta_k = max(0.0, np.dot(g_k, g_k - g_old) / denom)
                         p_k = -g_k + beta_k * p_old
 
-                # FIX: se pasa p_k directamente sin escalar por alpha_init
-                # line_search ya maneja el tamaño de paso internamente
                 res_alpha = line_search(f_eval, grad_eval, x_k, p_k, gfk=g_k, old_fval=f_k, c1=c1, c2=c2)
                 alpha_k = res_alpha[0]
 
-                # FIX: se elimina el doble escalado alpha_k * alpha_init
                 if alpha_k is None or alpha_k < alpha_min:
                     alpha_k = alpha_min
                     
@@ -182,6 +179,9 @@ if st.button("Ejecutar Optimización"):
                 x_k = x_k + alpha_k * p_k
                 iters_realizadas += 1
                 error_final = error_actual
+
+            # Agregar el punto final a la trayectoria
+            trayectoria_x.append(x_k.copy())
 
         # --- RESULTADOS ---
         st.success("✅ Optimización finalizada con éxito.")
@@ -194,7 +194,7 @@ if st.button("Ejecutar Optimización"):
         col4.metric("Error Final", f"{error_final:.2e}")
         
         df_historial = pd.DataFrame(historial_datos)
-        
+
         # --- GRÁFICO DE CONVERGENCIA ---
         st.markdown("---")
         st.subheader("📈 Gráfico de Convergencia")
@@ -204,7 +204,181 @@ if st.button("Ejecutar Optimización"):
         fig.update_layout(title="Error vs Número de Iteraciones", xaxis_title="Iteración", 
                           yaxis_title="Error", yaxis_type="log") 
         st.plotly_chart(fig, use_container_width=True)
-        
+
+        # ---------------------------------------------------------------
+        # NUEVO: MAPA DE CONTORNO CON TRAYECTORIA (solo para 2 variables)
+        # ---------------------------------------------------------------
+        if num_vars == 2:
+            st.markdown("---")
+            st.subheader("🗺️ Mapa de Contorno con Trayectoria")
+
+            tray = np.array(trayectoria_x)
+            x1_tray = tray[:, 0]
+            x2_tray = tray[:, 1]
+
+            # Calcular rango del contorno con margen alrededor de la trayectoria
+            margen = max(abs(x0[0] - x_k[0]), abs(x0[1] - x_k[1])) * 0.4 + 1.5
+            x1_min = min(x1_tray.min(), x_k[0]) - margen
+            x1_max = max(x1_tray.max(), x_k[0]) + margen
+            x2_min = min(x2_tray.min(), x_k[1]) - margen
+            x2_max = max(x2_tray.max(), x_k[1]) + margen
+
+            grid_n = 120
+            x1_grid = np.linspace(x1_min, x1_max, grid_n)
+            x2_grid = np.linspace(x2_min, x2_max, grid_n)
+            X1, X2 = np.meshgrid(x1_grid, x2_grid)
+
+            Z = np.zeros_like(X1)
+            for i in range(grid_n):
+                for j in range(grid_n):
+                    try:
+                        Z[i, j] = f_eval([X1[i, j], X2[i, j]])
+                    except Exception:
+                        Z[i, j] = np.nan
+
+            # Limitar valores extremos para que el contorno sea legible
+            z_finite = Z[np.isfinite(Z)]
+            if len(z_finite) > 0:
+                z_p5  = np.percentile(z_finite, 2)
+                z_p95 = np.percentile(z_finite, 98)
+                Z = np.clip(Z, z_p5, z_p95)
+
+            fig_contour = go.Figure()
+
+            # Capa 1: superficie de contorno rellena
+            fig_contour.add_trace(go.Contour(
+                x=x1_grid, y=x2_grid, z=Z,
+                colorscale='RdYlGn_r',
+                contours=dict(showlabels=True, labelfont=dict(size=10, color='white')),
+                colorbar=dict(title='f(x)', thickness=14),
+                name='f(x1, x2)'
+            ))
+
+            # Capa 2: trayectoria del algoritmo
+            fig_contour.add_trace(go.Scatter(
+                x=x1_tray, y=x2_tray,
+                mode='lines+markers',
+                line=dict(color='white', width=2, dash='dot'),
+                marker=dict(color='white', size=6, symbol='circle',
+                            line=dict(color='#333', width=1)),
+                name='Trayectoria'
+            ))
+
+            # Capa 3: punto de inicio
+            fig_contour.add_trace(go.Scatter(
+                x=[x0[0]], y=[x0[1]],
+                mode='markers+text',
+                marker=dict(color='royalblue', size=14, symbol='diamond',
+                            line=dict(color='white', width=2)),
+                text=['Inicio'],
+                textposition='top right',
+                textfont=dict(color='royalblue', size=12),
+                name='Punto de inicio'
+            ))
+
+            # Capa 4: punto final (mínimo encontrado)
+            fig_contour.add_trace(go.Scatter(
+                x=[x_k[0]], y=[x_k[1]],
+                mode='markers+text',
+                marker=dict(color='#F63366', size=16, symbol='star',
+                            line=dict(color='white', width=2)),
+                text=['x*'],
+                textposition='top right',
+                textfont=dict(color='#F63366', size=13),
+                name='Mínimo encontrado'
+            ))
+
+            fig_contour.update_layout(
+                title=f"Curvas de nivel de f(x) — trayectoria {metodo}",
+                xaxis_title='x1',
+                yaxis_title='x2',
+                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                height=520
+            )
+            st.plotly_chart(fig_contour, use_container_width=True)
+            st.caption("⬦ Inicio  ★ Mínimo encontrado  · · · Trayectoria del algoritmo")
+
+        else:
+            st.info("ℹ️ El mapa de contorno está disponible solo para funciones de 2 variables.")
+
+        # ---------------------------------------------------------------
+        # NUEVO: CLASIFICACIÓN AUTOMÁTICA DEL PUNTO CRÍTICO
+        # ---------------------------------------------------------------
+        st.markdown("---")
+        st.subheader("🔬 Clasificación del Punto Crítico")
+
+        H_final = hess_eval(x_k)
+        eigenvalues = np.linalg.eigvals(H_final)
+        eigenvalues_real = np.real(eigenvalues)
+        det_H = np.linalg.det(H_final)
+        traza_H = np.trace(H_final)
+
+        todos_positivos  = np.all(eigenvalues_real > 1e-10)
+        todos_negativos  = np.all(eigenvalues_real < -1e-10)
+        hay_mixtos       = np.any(eigenvalues_real > 1e-10) and np.any(eigenvalues_real < -1e-10)
+        hay_cero         = np.any(np.abs(eigenvalues_real) <= 1e-10)
+
+        if todos_positivos:
+            tipo      = "✅ Mínimo local"
+            color_box = "success"
+            explicacion = (
+                "Todos los valores propios del Hessiano son **positivos**, "
+                "lo que indica que la función es localmente convexa en x*. "
+                "El punto encontrado es un **mínimo local** (o global si la función es convexa)."
+            )
+        elif todos_negativos:
+            tipo      = "⚠️ Máximo local"
+            color_box = "warning"
+            explicacion = (
+                "Todos los valores propios del Hessiano son **negativos**, "
+                "lo que indica que la función es localmente cóncava en x*. "
+                "El punto encontrado es un **máximo local**, no un mínimo."
+            )
+        elif hay_mixtos:
+            tipo      = "❌ Punto de silla"
+            color_box = "error"
+            explicacion = (
+                "Los valores propios del Hessiano tienen **signos mixtos** (positivos y negativos). "
+                "El punto encontrado es un **punto de silla**: mínimo en algunas direcciones y máximo en otras. "
+                "No es un mínimo real de la función."
+            )
+        elif hay_cero:
+            tipo      = "⚠️ Punto crítico degenerado"
+            color_box = "warning"
+            explicacion = (
+                "Al menos un valor propio del Hessiano es **cercano a cero**. "
+                "El test de segunda derivada es **inconcluso**: se necesita análisis de orden superior "
+                "para determinar si es mínimo, máximo o punto de silla."
+            )
+        else:
+            tipo      = "❓ No determinado"
+            color_box = "info"
+            explicacion = "No se pudo clasificar el punto crítico con la información disponible."
+
+        # Mostrar clasificación
+        if color_box == "success":
+            st.success(f"**Tipo de punto crítico:** {tipo}")
+        elif color_box == "warning":
+            st.warning(f"**Tipo de punto crítico:** {tipo}")
+        elif color_box == "error":
+            st.error(f"**Tipo de punto crítico:** {tipo}")
+        else:
+            st.info(f"**Tipo de punto crítico:** {tipo}")
+
+        st.markdown(explicacion)
+
+        # Tabla de valores propios y métricas del Hessiano
+        col_h1, col_h2, col_h3 = st.columns(3)
+        col_h1.metric("Determinante det(H)", f"{det_H:.4e}")
+        col_h2.metric("Traza tr(H)", f"{traza_H:.4e}")
+        col_h3.metric("Nº de variables", num_vars)
+
+        df_eig = pd.DataFrame({
+            "Valor propio λ": [f"{v:.6e}" for v in eigenvalues_real],
+            "Signo": ["+" if v > 1e-10 else ("−" if v < -1e-10 else "≈0") for v in eigenvalues_real]
+        })
+        st.dataframe(df_eig, hide_index=True, use_container_width=True)
+
         # --- MATEMÁTICA SIMBÓLICA ---
         st.markdown("---")
         st.subheader("🧬 Análisis Matemático Avanzado")
@@ -223,8 +397,10 @@ if st.button("Ejecutar Optimización"):
             df_historial[f"x{i+1}"] = df_historial["x"].apply(lambda coord: coord[i])
         df_historial = df_historial.drop(columns=["x"]) 
         
-        tabla_filtrada = df_historial[(df_historial["Iteración"] >= min_iter_visual) & (df_historial["Iteración"] <= max_iter_visual)]
-        
+        tabla_filtrada = df_historial[
+            (df_historial["Iteración"] >= min_iter_visual) & 
+            (df_historial["Iteración"] <= max_iter_visual)
+        ]
         st.dataframe(tabla_filtrada, hide_index=True, use_container_width=True)
 
     except Exception as e:
