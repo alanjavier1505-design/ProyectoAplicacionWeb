@@ -24,54 +24,29 @@ st.markdown("""
     }
     .stButton > button:hover { background-color: #E8C547; color: #0D1B2A; }
 
-    /* --- FIX: inputs con fondo oscuro y texto claro --- */
+    /* --- FIX: texto oscuro en inputs para contrastar con fondo blanco --- */
     .stTextInput > div > div > input {
-        background-color: #1A2F4A !important;
-        color: #F0F4F8 !important;
-        border: 1px solid #2E5077 !important;
-        border-radius: 6px !important;
+        color: #0D1B2A !important;
+        font-weight: 500 !important;
     }
     .stNumberInput > div > div > input {
-        background-color: #1A2F4A !important;
-        color: #F0F4F8 !important;
-        border: 1px solid #2E5077 !important;
-        border-radius: 6px !important;
+        color: #0D1B2A !important;
+        font-weight: 500 !important;
     }
-    /* Selectbox — contenedor visible */
-    .stSelectbox > div > div {
-        background-color: #1A2F4A !important;
-        color: #F0F4F8 !important;
-        border: 1px solid #2E5077 !important;
-        border-radius: 6px !important;
+    /* Texto visible del selectbox */
+    .stSelectbox > div > div,
+    .stSelectbox > div > div > div,
+    [data-baseweb="select"] > div {
+        color: #0D1B2A !important;
+        font-weight: 500 !important;
     }
-    /* Texto dentro del selectbox */
-    .stSelectbox > div > div > div {
-        color: #F0F4F8 !important;
-    }
-    /* Dropdown abierto del selectbox */
-    [data-baseweb="select"] * {
-        background-color: #1A2F4A !important;
-        color: #F0F4F8 !important;
-    }
-    [data-baseweb="menu"] {
-        background-color: #1A2F4A !important;
+    /* Opciones del dropdown abierto */
+    [data-baseweb="menu"] li {
+        color: #0D1B2A !important;
+        background-color: #F0F4F8 !important;
     }
     [data-baseweb="menu"] li:hover {
-        background-color: #2E5077 !important;
-    }
-    /* Placeholder text */
-    .stTextInput > div > div > input::placeholder,
-    .stNumberInput > div > div > input::placeholder {
-        color: #A8C4E0 !important;
-    }
-    /* Flechas del number input */
-    .stNumberInput button {
-        background-color: #2E5077 !important;
-        color: #F0F4F8 !important;
-        border: 1px solid #2E5077 !important;
-    }
-    .stNumberInput button:hover {
-        background-color: #E8C547 !important;
+        background-color: #A8C4E0 !important;
         color: #0D1B2A !important;
     }
 
