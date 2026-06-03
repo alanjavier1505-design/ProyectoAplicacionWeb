@@ -4,10 +4,136 @@ import plotly.graph_objects as go
 import sympy as sp
 from scipy.optimize import line_search
 import pandas as pd
+import base64
+from pathlib import Path
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="Optimizador de Funciones", page_icon="⚙️", layout="wide")
-st.title("⚙️ Calculadora de Optimización No Lineal")
+st.set_page_config(page_title="Calculadora de Optimización", page_icon="🌌", layout="wide")
+
+# --- ESTILOS GLOBALES (paleta Van Gogh: azules noche + dorados) ---
+st.markdown("""
+<style>
+    /* Fondo principal */
+    .stApp {
+        background-color: #0D1B2A;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #1A2F4A;
+    }
+    [data-testid="stSidebar"] * {
+        color: #E8D5A3 !important;
+    }
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stNumberInput label,
+    [data-testid="stSidebar"] .stTextInput label,
+    [data-testid="stSidebar"] .stSlider label {
+        color: #E8D5A3 !important;
+    }
+
+    /* Texto general */
+    html, body, [class*="css"], p, span, div, label {
+        color: #F0F4F8;
+    }
+
+    /* Títulos */
+    h1, h2, h3, h4 {
+        color: #E8C547 !important;
+    }
+
+    /* Botón principal */
+    .stButton > button {
+        background-color: #1A3A5C;
+        color: #E8C547;
+        border: 1px solid #E8C547;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .stButton > button:hover {
+        background-color: #E8C547;
+        color: #0D1B2A;
+        border-color: #E8C547;
+    }
+
+    /* Inputs y selectboxes */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div {
+        background-color: #1A2F4A;
+        color: #F0F4F8;
+        border: 1px solid #2E5077;
+        border-radius: 6px;
+    }
+
+    /* Métricas */
+    [data-testid="stMetric"] {
+        background-color: #1A2F4A;
+        border: 1px solid #2E5077;
+        border-radius: 10px;
+        padding: 12px;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #A8C4E0 !important;
+    }
+    [data-testid="stMetricValue"] {
+        color: #E8C547 !important;
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        background-color: #1A2F4A;
+        color: #E8C547 !important;
+        border-radius: 8px;
+    }
+    .streamlit-expanderContent {
+        background-color: #132338;
+        border: 1px solid #2E5077;
+    }
+
+    /* Dataframe */
+    [data-testid="stDataFrame"] {
+        background-color: #1A2F4A;
+    }
+
+    /* Separadores */
+    hr {
+        border-color: #2E5077;
+    }
+
+    /* Banner: recortar imagen como header */
+    [data-testid="stImage"] img {
+        max-height: 220px;
+        width: 100%;
+        object-fit: cover;
+        object-position: center 40%;
+        border-radius: 12px;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Caption */
+    .stCaption {
+        color: #A8C4E0 !important;
+    }
+
+    /* Info / success / warning / error boxes */
+    .stAlert {
+        background-color: #1A2F4A;
+        border-radius: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- BANNER: imagen de Van Gogh ---
+st.image("van_gogh.png", use_container_width=True)
+
+# --- TÍTULO PRINCIPAL ---
+st.markdown("""
+<h1 style='text-align: center; color: #E8C547; font-size: 2.4rem; margin-top: 0.2rem; margin-bottom: 1.2rem;'>
+    🌌 Calculadora de Optimización
+</h1>
+""", unsafe_allow_html=True)
 
 # --- MEMORIA DE LA PÁGINA (SESSION STATE) ---
 if 'n_vars' not in st.session_state:
@@ -67,59 +193,66 @@ with st.expander("📖 Manual de Uso: ¿Cómo escribir las funciones matemática
         st.button("Probar Gauss", on_click=cargar_ejemplo, args=(2, "-exp(-x1**2 - x2**2)", "1.0, 1.0"), use_container_width=True)
 
 # --- BARRA LATERAL: DATOS DE ENTRADA ---
-st.sidebar.header("🛠️ Parámetros de Entrada")
+st.sidebar.markdown("""
+<h2 style='color: #E8C547; font-size: 1.2rem; margin-bottom: 0.5rem;'>🛠️ Parámetros de Entrada</h2>
+""", unsafe_allow_html=True)
 
 num_vars = st.sidebar.number_input("Número de variables", min_value=1, max_value=10, key="n_vars")
-metodo = st.sidebar.selectbox("Método de Optimización", 
+metodo = st.sidebar.selectbox("Método de Optimización",
                               ["Gradiente Descendente", "Gradiente Conjugado", "Método de Newton"])
 
-st.sidebar.markdown("<small>Ej: x1**2 + x2**2, exp(-x1**2)</small>", unsafe_allow_html=True)
+st.sidebar.markdown("<small style='color:#A8C4E0;'>Ej: x1**2 + x2**2, exp(-x1**2)</small>", unsafe_allow_html=True)
 funcion_str = st.sidebar.text_input("Función objetivo f(x)", key="func_str")
 punto_inicio = st.sidebar.text_input("Punto de partida (separado por comas)", key="p0_str")
 
-st.sidebar.subheader("🎯 Criterios de Parada")
+st.sidebar.markdown("""
+<h3 style='color: #E8C547; font-size: 1rem; margin-top: 1rem;'>🎯 Criterios de Parada</h3>
+""", unsafe_allow_html=True)
 max_iter = st.sidebar.number_input("Número máximo de iteraciones", min_value=1, value=100)
 tolerancia = st.sidebar.number_input("Tolerancia de convergencia", value=1e-5, format="%.1e")
 
-st.sidebar.subheader("📏 Búsqueda de Línea y Wolfe")
+st.sidebar.markdown("""
+<h3 style='color: #E8C547; font-size: 1rem; margin-top: 1rem;'>📏 Búsqueda de Línea y Wolfe</h3>
+""", unsafe_allow_html=True)
 alpha_init = st.sidebar.number_input("Alfa Inicial (α0)", min_value=0.01, max_value=10.0, value=1.0, step=0.1)
 alpha_min = st.sidebar.number_input("Alfa Mínimo (α min)", min_value=1e-9, max_value=0.1, value=1e-4, format="%.1e")
 c1 = st.sidebar.slider("Parámetro c1 (Armijo)", 0.0001, 0.5, 1e-4, format="%.4f")
 c2 = st.sidebar.slider("Parámetro c2 (Curvatura)", c1, 0.99, 0.9)
 
-# --- SLIDER EN LA BARRA LATERAL ---
-st.sidebar.subheader("👁️ Visualización de Tabla")
+st.sidebar.markdown("""
+<h3 style='color: #E8C547; font-size: 1rem; margin-top: 1rem;'>👁️ Visualización de Tabla</h3>
+""", unsafe_allow_html=True)
 rango_tabla = st.sidebar.slider(
     "Rango de iteraciones a mostrar:",
     min_value=0,
-    max_value=int(max_iter), 
+    max_value=int(max_iter),
     value=(0, min(20, int(max_iter)))
 )
 min_iter_visual = rango_tabla[0]
 max_iter_visual = rango_tabla[1]
 
 # --- LÓGICA DE EJECUCIÓN ---
-if st.button("Ejecutar Optimización"):
+if st.button("🚀 Ejecutar Optimización"):
     try:
         x0 = np.array([float(x.strip()) for x in punto_inicio.split(',')])
         if len(x0) != num_vars:
             st.error(f"El punto de partida debe tener {num_vars} coordenadas.")
             st.stop()
-            
+
         with st.spinner("Calculando derivadas y ejecutando optimización..."):
-            
+
             vars_sym = sp.symbols(f'x1:{num_vars+1}')
-            
+
             func_str_clean = funcion_str.replace('sen', 'sin').replace('^', '**')
             f_sym = sp.sympify(func_str_clean)
-            
+
             grad_sym = [sp.diff(f_sym, var) for var in vars_sym]
             hessian_sym = [[sp.diff(g, var) for var in vars_sym] for g in grad_sym]
-            
+
             f_num = sp.lambdify(vars_sym, f_sym, 'numpy')
             grad_num = sp.lambdify(vars_sym, grad_sym, 'numpy')
             hessian_num = sp.lambdify(vars_sym, hessian_sym, 'numpy')
-            
+
             def f_eval(x): return float(f_num(*x))
             def grad_eval(x): return np.array(grad_num(*x), dtype=float)
             def hess_eval(x): return np.array(hessian_num(*x), dtype=float)
@@ -127,41 +260,41 @@ if st.button("Ejecutar Optimización"):
             x_k = x0.copy()
             historial_datos = []
             trayectoria_x = []
-            
+
             p_old = None
             g_old = None
-            
+
             iters_realizadas = 0
             error_final = 0.0
-            
+
             for k in range(max_iter):
                 g_k = grad_eval(x_k)
                 f_k = f_eval(x_k)
                 error_actual = np.linalg.norm(g_k)
-                
+
                 trayectoria_x.append(x_k.copy())
-                
+
                 historial_datos.append({
                     "Iteración": k,
                     "x": x_k.copy(),
                     "f(x)": f_k,
                     "Error": error_actual
                 })
-                
+
                 if error_actual < tolerancia:
                     error_final = error_actual
                     break
-                    
+
                 if metodo == "Gradiente Descendente":
                     p_k = -g_k
-                    
+
                 elif metodo == "Método de Newton":
                     H_k = hess_eval(x_k)
                     try:
                         p_k = np.linalg.solve(H_k, -g_k)
                     except np.linalg.LinAlgError:
                         p_k = np.dot(np.linalg.pinv(H_k), -g_k)
-                        
+
                 elif metodo == "Gradiente Conjugado":
                     if k == 0 or k % num_vars == 0:
                         p_k = -g_k
@@ -178,39 +311,52 @@ if st.button("Ejecutar Optimización"):
 
                 if alpha_k is None or alpha_k < alpha_min:
                     alpha_k = alpha_min
-                    
+
                 p_old = p_k
                 g_old = g_k
                 x_k = x_k + alpha_k * p_k
                 iters_realizadas += 1
                 error_final = error_actual
 
-            # Agregar el punto final a la trayectoria
             trayectoria_x.append(x_k.copy())
 
         # --- RESULTADOS ---
         st.success("✅ Optimización finalizada con éxito.")
         st.balloons()
-        
+
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Punto mínimo (x*)", f"[{', '.join([f'{x:.4f}' for x in x_k])}]")
         col2.metric("Valor en el mínimo f(x*)", f"{f_eval(x_k):.4e}")
         col3.metric("Iteraciones", iters_realizadas)
         col4.metric("Error Final", f"{error_final:.2e}")
-        
+
         df_historial = pd.DataFrame(historial_datos)
 
         # --- GRÁFICO DE CONVERGENCIA ---
         st.markdown("---")
         st.subheader("📈 Gráfico de Convergencia")
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df_historial["Iteración"], y=df_historial["Error"], 
-                                 mode='lines+markers', name='||∇f(x)||', marker=dict(color='#F63366')))
-        fig.update_layout(title="Error vs Número de Iteraciones", xaxis_title="Iteración", 
-                          yaxis_title="Error", yaxis_type="log") 
+        fig.add_trace(go.Scatter(
+            x=df_historial["Iteración"], y=df_historial["Error"],
+            mode='lines+markers', name='||∇f(x)||',
+            marker=dict(color='#E8C547'),
+            line=dict(color='#E8C547')
+        ))
+        fig.update_layout(
+            title="Error vs Número de Iteraciones",
+            xaxis_title="Iteración",
+            yaxis_title="Error",
+            yaxis_type="log",
+            paper_bgcolor='#0D1B2A',
+            plot_bgcolor='#132338',
+            font=dict(color='#F0F4F8'),
+            title_font=dict(color='#E8C547'),
+            xaxis=dict(gridcolor='#2E5077'),
+            yaxis=dict(gridcolor='#2E5077')
+        )
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- MAPA DE CONTORNO CON TRAYECTORIA (solo para 2 variables) ---
+        # --- MAPA DE CONTORNO CON TRAYECTORIA ---
         if num_vars == 2:
             st.markdown("---")
             st.subheader("🗺️ Mapa de Contorno con Trayectoria")
@@ -248,40 +394,42 @@ if st.button("Ejecutar Optimización"):
 
             fig_contour.add_trace(go.Contour(
                 x=x1_grid, y=x2_grid, z=Z,
-                colorscale='RdYlGn_r',
-                contours=dict(showlabels=True, labelfont=dict(size=10, color='white')),
-                colorbar=dict(title='f(x)', thickness=14),
+                colorscale='Blues',
+                contours=dict(showlabels=True, labelfont=dict(size=10, color='#E8C547')),
+                colorbar=dict(title='f(x)', thickness=14,
+                              tickfont=dict(color='#F0F4F8'),
+                              titlefont=dict(color='#E8C547')),
                 name='f(x1, x2)'
             ))
 
             fig_contour.add_trace(go.Scatter(
                 x=x1_tray, y=x2_tray,
                 mode='lines+markers',
-                line=dict(color='white', width=2, dash='dot'),
-                marker=dict(color='white', size=6, symbol='circle',
-                            line=dict(color='#333', width=1)),
+                line=dict(color='#E8C547', width=2, dash='dot'),
+                marker=dict(color='#E8C547', size=6, symbol='circle',
+                            line=dict(color='#0D1B2A', width=1)),
                 name='Trayectoria'
             ))
 
             fig_contour.add_trace(go.Scatter(
                 x=[x0[0]], y=[x0[1]],
                 mode='markers+text',
-                marker=dict(color='royalblue', size=14, symbol='diamond',
+                marker=dict(color='#5BA4CF', size=14, symbol='diamond',
                             line=dict(color='white', width=2)),
                 text=['Inicio'],
                 textposition='top right',
-                textfont=dict(color='royalblue', size=12),
+                textfont=dict(color='#5BA4CF', size=12),
                 name='Punto de inicio'
             ))
 
             fig_contour.add_trace(go.Scatter(
                 x=[x_k[0]], y=[x_k[1]],
                 mode='markers+text',
-                marker=dict(color='#F63366', size=16, symbol='star',
+                marker=dict(color='#E8C547', size=16, symbol='star',
                             line=dict(color='white', width=2)),
                 text=['x*'],
                 textposition='top right',
-                textfont=dict(color='#F63366', size=13),
+                textfont=dict(color='#E8C547', size=13),
                 name='Mínimo encontrado'
             ))
 
@@ -289,8 +437,15 @@ if st.button("Ejecutar Optimización"):
                 title=f"Curvas de nivel de f(x) — trayectoria {metodo}",
                 xaxis_title='x1',
                 yaxis_title='x2',
-                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-                height=520
+                legend=dict(orientation='h', yanchor='bottom', y=1.02,
+                            xanchor='right', x=1, font=dict(color='#F0F4F8')),
+                height=520,
+                paper_bgcolor='#0D1B2A',
+                plot_bgcolor='#132338',
+                font=dict(color='#F0F4F8'),
+                title_font=dict(color='#E8C547'),
+                xaxis=dict(gridcolor='#2E5077'),
+                yaxis=dict(gridcolor='#2E5077')
             )
             st.plotly_chart(fig_contour, use_container_width=True)
             st.caption("⬦ Inicio  ★ Mínimo encontrado  · · · Trayectoria del algoritmo")
@@ -308,10 +463,10 @@ if st.button("Ejecutar Optimización"):
         det_H = np.linalg.det(H_final)
         traza_H = np.trace(H_final)
 
-        todos_positivos  = np.all(eigenvalues_real > 1e-10)
-        todos_negativos  = np.all(eigenvalues_real < -1e-10)
-        hay_mixtos       = np.any(eigenvalues_real > 1e-10) and np.any(eigenvalues_real < -1e-10)
-        hay_cero         = np.any(np.abs(eigenvalues_real) <= 1e-10)
+        todos_positivos = np.all(eigenvalues_real > 1e-10)
+        todos_negativos = np.all(eigenvalues_real < -1e-10)
+        hay_mixtos      = np.any(eigenvalues_real > 1e-10) and np.any(eigenvalues_real < -1e-10)
+        hay_cero        = np.any(np.abs(eigenvalues_real) <= 1e-10)
 
         if todos_positivos:
             tipo      = "✅ Mínimo local"
@@ -381,17 +536,17 @@ if st.button("Ejecutar Optimización"):
             st.latex(r"\nabla f(x) = " + sp.latex(grad_sym))
         with col_math2:
             st.latex(r"H(x) = " + sp.latex(hessian_sym))
-            
+
         # --- HISTORIAL FILTRABLE ---
         st.markdown("---")
         st.subheader("📋 Historial de Iteraciones")
-        
+
         for i in range(num_vars):
             df_historial[f"x{i+1}"] = df_historial["x"].apply(lambda coord: coord[i])
-        df_historial = df_historial.drop(columns=["x"]) 
-        
+        df_historial = df_historial.drop(columns=["x"])
+
         tabla_filtrada = df_historial[
-            (df_historial["Iteración"] >= min_iter_visual) & 
+            (df_historial["Iteración"] >= min_iter_visual) &
             (df_historial["Iteración"] <= max_iter_visual)
         ]
         st.dataframe(tabla_filtrada, hide_index=True, use_container_width=True)
