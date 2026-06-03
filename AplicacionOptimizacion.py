@@ -24,28 +24,29 @@ st.markdown("""
     }
     .stButton > button:hover { background-color: #E8C547; color: #0D1B2A; }
 
-    /* --- FIX: texto oscuro en inputs para contrastar con fondo blanco --- */
-    .stTextInput > div > div > input {
+    /* --- FIX: texto oscuro en todos los inputs --- */
+    input, textarea, [data-baseweb="input"] input,
+    [data-baseweb="base-input"] input,
+    .stTextInput input, .stNumberInput input {
         color: #0D1B2A !important;
         font-weight: 500 !important;
+        caret-color: #0D1B2A !important;
     }
-    .stNumberInput > div > div > input {
+    /* Selectbox texto visible */
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] div,
+    .stSelectbox span, .stSelectbox div {
         color: #0D1B2A !important;
-        font-weight: 500 !important;
     }
-    /* Texto visible del selectbox */
-    .stSelectbox > div > div,
-    .stSelectbox > div > div > div,
-    [data-baseweb="select"] > div {
-        color: #0D1B2A !important;
-        font-weight: 500 !important;
-    }
-    /* Opciones del dropdown abierto */
-    [data-baseweb="menu"] li {
+    /* Dropdown opciones */
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu"] li span,
+    [data-baseweb="menu"] li div {
         color: #0D1B2A !important;
         background-color: #F0F4F8 !important;
     }
-    [data-baseweb="menu"] li:hover {
+    [data-baseweb="menu"] li:hover,
+    [data-baseweb="menu"] li:hover span {
         background-color: #A8C4E0 !important;
         color: #0D1B2A !important;
     }
