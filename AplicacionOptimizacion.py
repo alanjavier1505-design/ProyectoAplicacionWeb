@@ -8,7 +8,7 @@ import pandas as pd
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Calculadora de Optimización", page_icon="🌌", layout="wide")
 
-# --- ESTILOS GLOBALES (paleta Van Gogh: azules noche + dorados) ---
+# --- ESTILOS GLOBALES ---
 st.markdown("""
 <style>
     .stApp { background-color: #0D1B2A; }
@@ -16,18 +16,65 @@ st.markdown("""
     [data-testid="stSidebar"] * { color: #E8D5A3 !important; }
     html, body, [class*="css"], p, span, div, label { color: #F0F4F8; }
     h1, h2, h3, h4 { color: #E8C547 !important; }
+
     .stButton > button {
         background-color: #1A3A5C; color: #E8C547;
         border: 1px solid #E8C547; border-radius: 8px;
         font-weight: 600; transition: all 0.2s;
     }
     .stButton > button:hover { background-color: #E8C547; color: #0D1B2A; }
-    .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
-    .stSelectbox > div > div {
-        background-color: #1A2F4A; color: #F0F4F8;
-        border: 1px solid #2E5077; border-radius: 6px;
+
+    /* --- FIX: inputs con fondo oscuro y texto claro --- */
+    .stTextInput > div > div > input {
+        background-color: #1A2F4A !important;
+        color: #F0F4F8 !important;
+        border: 1px solid #2E5077 !important;
+        border-radius: 6px !important;
     }
+    .stNumberInput > div > div > input {
+        background-color: #1A2F4A !important;
+        color: #F0F4F8 !important;
+        border: 1px solid #2E5077 !important;
+        border-radius: 6px !important;
+    }
+    /* Selectbox — contenedor visible */
+    .stSelectbox > div > div {
+        background-color: #1A2F4A !important;
+        color: #F0F4F8 !important;
+        border: 1px solid #2E5077 !important;
+        border-radius: 6px !important;
+    }
+    /* Texto dentro del selectbox */
+    .stSelectbox > div > div > div {
+        color: #F0F4F8 !important;
+    }
+    /* Dropdown abierto del selectbox */
+    [data-baseweb="select"] * {
+        background-color: #1A2F4A !important;
+        color: #F0F4F8 !important;
+    }
+    [data-baseweb="menu"] {
+        background-color: #1A2F4A !important;
+    }
+    [data-baseweb="menu"] li:hover {
+        background-color: #2E5077 !important;
+    }
+    /* Placeholder text */
+    .stTextInput > div > div > input::placeholder,
+    .stNumberInput > div > div > input::placeholder {
+        color: #A8C4E0 !important;
+    }
+    /* Flechas del number input */
+    .stNumberInput button {
+        background-color: #2E5077 !important;
+        color: #F0F4F8 !important;
+        border: 1px solid #2E5077 !important;
+    }
+    .stNumberInput button:hover {
+        background-color: #E8C547 !important;
+        color: #0D1B2A !important;
+    }
+
     [data-testid="stMetric"] {
         background-color: #1A2F4A; border: 1px solid #2E5077; border-radius: 10px; padding: 12px;
     }
