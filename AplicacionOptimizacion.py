@@ -25,29 +25,48 @@ st.markdown("""
     .stButton > button:hover { background-color: #E8C547; color: #0D1B2A; }
 
     /* --- FIX: texto oscuro en todos los inputs --- */
-    input, textarea, [data-baseweb="input"] input,
+    input, textarea,
+    [data-baseweb="input"] input,
     [data-baseweb="base-input"] input,
     .stTextInput input, .stNumberInput input {
         color: #0D1B2A !important;
         font-weight: 500 !important;
         caret-color: #0D1B2A !important;
     }
-    /* Selectbox texto visible */
+    /* Selectbox: texto del valor seleccionado */
+    [data-baseweb="select"] *,
     [data-baseweb="select"] span,
     [data-baseweb="select"] div,
-    .stSelectbox span, .stSelectbox div {
+    [data-baseweb="select"] p,
+    .stSelectbox * {
         color: #0D1B2A !important;
     }
-    /* Dropdown opciones */
-    [data-baseweb="menu"] li,
-    [data-baseweb="menu"] li span,
-    [data-baseweb="menu"] li div {
+    /* Dropdown: lista de opciones */
+    [data-baseweb="popover"] *,
+    [data-baseweb="menu"] *,
+    [role="listbox"] *,
+    [role="option"] * {
         color: #0D1B2A !important;
         background-color: #F0F4F8 !important;
     }
-    [data-baseweb="menu"] li:hover,
-    [data-baseweb="menu"] li:hover span {
+    [data-baseweb="menu"] [aria-selected="true"],
+    [data-baseweb="menu"] [aria-selected="true"] * {
         background-color: #A8C4E0 !important;
+        color: #0D1B2A !important;
+    }
+    /* Botones +/- del number input */
+    .stNumberInput button,
+    .stNumberInput button *,
+    [data-testid="stNumberInputField"] ~ div button,
+    button[data-testid="stNumberInput-StepDown"],
+    button[data-testid="stNumberInput-StepUp"] {
+        background-color: #2E5077 !important;
+        color: #F0F4F8 !important;
+        border: none !important;
+    }
+    button[data-testid="stNumberInput-StepDown"]:hover,
+    button[data-testid="stNumberInput-StepUp"]:hover {
+        background-color: #E8C547 !important;
         color: #0D1B2A !important;
     }
 
