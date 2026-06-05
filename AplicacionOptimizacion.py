@@ -127,6 +127,10 @@ with st.expander("📖 Manual de Uso: ¿Cómo escribir las funciones matemática
         * Logaritmo base 10: usa `log(x, 10)`. Ej: `log(x1, 10)` para referirte a $\\log_{10}(x_1)$.
         * Logaritmo base 2: usa `log(x, 2)`. Ej: `log(x1, 2)` para referirte a $\\log_2(x_1)$.
         * ⚠️ El argumento del logaritmo debe ser **estrictamente positivo**. Asegúrate de que el punto de partida y la trayectoria no pasen por valores ≤ 0.
+    * **Raíces:**
+        * Raíz cuadrada: usa `sqrt(x)`. Ej: `sqrt(x1)` para referirte a $\\sqrt{x_1}$.
+        * Raíz n-ésima: usa `x**(1/n)`. Ej: `x1**(1/3)` para referirte a $\\sqrt[3]{x_1}$.
+        * ⚠️ El argumento de `sqrt()` y de cualquier raíz con exponente fraccionario debe ser **estrictamente positivo**. Si el algoritmo evalúa un punto negativo durante la trayectoria, el resultado será un número complejo y la optimización fallará. **No uses** `raiz()` ni `√` ya que no son sintaxis válidas.
     """)
     st.markdown("---")
     st.markdown("**Ejemplos de funciones de prueba clásicas (Haz clic para cargar en el panel izquierdo):**")
