@@ -208,24 +208,19 @@ if st.button("🚀 Ejecutar Optimización"):
             grad_num = sp.lambdify(vars_sym, grad_sym, 'numpy')
             hessian_num = sp.lambdify(vars_sym, hessian_sym, 'numpy')
 
-            # Contadores de evaluaciones
-            conteo_f    = 0
-            conteo_grad = 0
-            conteo_hess = 0
+            # Contadores de evaluaciones (dict mutable para evitar problema de scope)
+            conteo = {"f": 0, "grad": 0, "hess": 0}
 
             def f_eval(x):
-                nonlocal conteo_f
-                conteo_f += 1
+                conteo["f"] += 1
                 return float(f_num(*x))
 
             def grad_eval(x):
-                nonlocal conteo_grad
-                conteo_grad += 1
+                conteo["grad"] += 1
                 return np.array(grad_num(*x), dtype=float)
 
             def hess_eval(x):
-                nonlocal conteo_hess
-                conteo_hess += 1
+                conteo["hess"] += 1
                 return np.array(hessian_num(*x), dtype=float)
 
             x_k = x0.copy()
@@ -304,11 +299,11 @@ if st.button("🚀 Ejecutar Optimización"):
         rc1, rc2, rc3, rc4, rc5 = st.columns(5)
         rc1.metric("⏱️ Tiempo total", f"{tiempo_total*1000:.2f} ms")
         rc2.metric("⏱️ Tiempo por iteración", f"{tiempo_por_iter*1000:.3f} ms")
-        rc3.metric("📊 Evaluaciones f(x)", conteo_f)
-        rc4.metric("📐 Evaluaciones ∇f", conteo_grad)
+        rc3.metric("📊 Evaluaciones f(x)", conteo["f"])
+        rc4.metric("📐 Evaluaciones ∇f", conteo["grad"])
         rc5.metric(
             "🔢 Evaluaciones H",
-            conteo_hess if metodo == "Método de Newton" else "— (no aplica)"
+            conteo["hess"] if metodo == "Método de Newton" else "— (no aplica)"
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
