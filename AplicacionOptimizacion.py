@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import sympy as sp
 from scipy.optimize import line_search
 import pandas as pd
+import time
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Calculadora de Optimización", page_icon="🌌", layout="wide")
@@ -24,7 +25,6 @@ st.markdown("""
     }
     .stButton > button:hover { background-color: #E8C547; color: #0D1B2A; }
 
-    /* --- FIX: texto oscuro en todos los inputs --- */
     input, textarea,
     [data-baseweb="input"] input,
     [data-baseweb="base-input"] input,
@@ -33,15 +33,11 @@ st.markdown("""
         font-weight: 500 !important;
         caret-color: #0D1B2A !important;
     }
-    /* Selectbox: texto del valor seleccionado */
     [data-baseweb="select"] *,
     [data-baseweb="select"] span,
     [data-baseweb="select"] div,
     [data-baseweb="select"] p,
-    .stSelectbox * {
-        color: #0D1B2A !important;
-    }
-    /* Dropdown: lista de opciones */
+    .stSelectbox * { color: #0D1B2A !important; }
     [data-baseweb="popover"] *,
     [data-baseweb="menu"] *,
     [role="listbox"] *,
@@ -54,10 +50,8 @@ st.markdown("""
         background-color: #A8C4E0 !important;
         color: #0D1B2A !important;
     }
-    /* Botones +/- del number input */
     .stNumberInput button,
     .stNumberInput button *,
-    [data-testid="stNumberInputField"] ~ div button,
     button[data-testid="stNumberInput-StepDown"],
     button[data-testid="stNumberInput-StepUp"] {
         background-color: #2E5077 !important;
@@ -69,12 +63,21 @@ st.markdown("""
         background-color: #E8C547 !important;
         color: #0D1B2A !important;
     }
-
     [data-testid="stMetric"] {
         background-color: #1A2F4A; border: 1px solid #2E5077; border-radius: 10px; padding: 12px;
     }
     [data-testid="stMetricLabel"] { color: #A8C4E0 !important; }
     [data-testid="stMetricValue"] { color: #E8C547 !important; }
+
+    /* Métricas de rendimiento en azul claro */
+    .metric-rendimiento [data-testid="stMetric"] {
+        background-color: #0F2D45 !important;
+        border: 1px solid #5BA4CF !important;
+    }
+    .metric-rendimiento [data-testid="stMetricValue"] {
+        color: #5BA4CF !important;
+    }
+
     .streamlit-expanderHeader { background-color: #1A2F4A; color: #E8C547 !important; border-radius: 8px; }
     .streamlit-expanderContent { background-color: #132338; border: 1px solid #2E5077; }
     hr { border-color: #2E5077; }
@@ -205,9 +208,25 @@ if st.button("🚀 Ejecutar Optimización"):
             grad_num = sp.lambdify(vars_sym, grad_sym, 'numpy')
             hessian_num = sp.lambdify(vars_sym, hessian_sym, 'numpy')
 
-            def f_eval(x): return float(f_num(*x))
-            def grad_eval(x): return np.array(grad_num(*x), dtype=float)
-            def hess_eval(x): return np.array(hessian_num(*x), dtype=float)
+            # Contadores de evaluaciones
+            conteo_f    = 0
+            conteo_grad = 0
+            conteo_hess = 0
+
+            def f_eval(x):
+                nonlocal conteo_f
+                conteo_f += 1
+                return float(f_num(*x))
+
+            def grad_eval(x):
+                nonlocal conteo_grad
+                conteo_grad += 1
+                return np.array(grad_num(*x), dtype=float)
+
+            def hess_eval(x):
+                nonlocal conteo_hess
+                conteo_hess += 1
+                return np.array(hessian_num(*x), dtype=float)
 
             x_k = x0.copy()
             historial_datos = []
@@ -216,6 +235,9 @@ if st.button("🚀 Ejecutar Optimización"):
             g_old = None
             iters_realizadas = 0
             error_final = 0.0
+
+            # --- INICIO CRONÓMETRO ---
+            t_inicio = time.perf_counter()
 
             for k in range(max_iter):
                 g_k = grad_eval(x_k)
@@ -255,6 +277,11 @@ if st.button("🚀 Ejecutar Optimización"):
                 iters_realizadas += 1
                 error_final = error_actual
 
+            # --- FIN CRONÓMETRO ---
+            t_fin = time.perf_counter()
+            tiempo_total = t_fin - t_inicio
+            tiempo_por_iter = tiempo_total / iters_realizadas if iters_realizadas > 0 else 0.0
+
             trayectoria_x.append(x_k.copy())
 
         # --- RESULTADOS ---
@@ -268,6 +295,25 @@ if st.button("🚀 Ejecutar Optimización"):
         col4.metric("Error Final", f"{error_final:.2e}")
 
         df_historial = pd.DataFrame(historial_datos)
+
+        # --- RENDIMIENTO COMPUTACIONAL ---
+        st.markdown("---")
+        st.subheader("⚡ Rendimiento Computacional")
+
+        st.markdown("<div class='metric-rendimiento'>", unsafe_allow_html=True)
+        rc1, rc2, rc3, rc4, rc5 = st.columns(5)
+        rc1.metric("⏱️ Tiempo total", f"{tiempo_total*1000:.2f} ms")
+        rc2.metric("⏱️ Tiempo por iteración", f"{tiempo_por_iter*1000:.3f} ms")
+        rc3.metric("📊 Evaluaciones f(x)", conteo_f)
+        rc4.metric("📐 Evaluaciones ∇f", conteo_grad)
+        rc5.metric(
+            "🔢 Evaluaciones H",
+            conteo_hess if metodo == "Método de Newton" else "— (no aplica)"
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        if metodo != "Método de Newton":
+            st.caption("ℹ️ El Hessiano solo se evalúa en el Método de Newton. Gradiente Descendente y Conjugado son métodos de primer orden.")
 
         # --- GRÁFICO DE CONVERGENCIA ---
         st.markdown("---")
@@ -320,8 +366,7 @@ if st.button("🚀 Ejecutar Optimización"):
                 contours=dict(showlabels=True, labelfont=dict(size=10, color='#E8C547')),
                 colorbar=dict(
                     title=dict(text='f(x)', font=dict(color='#E8C547')),
-                    thickness=14,
-                    tickfont=dict(color='#F0F4F8')
+                    thickness=14, tickfont=dict(color='#F0F4F8')
                 ),
                 name='f(x1, x2)'
             ))
