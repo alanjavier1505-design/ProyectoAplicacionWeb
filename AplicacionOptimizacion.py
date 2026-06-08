@@ -208,7 +208,6 @@ if st.button("🚀 Ejecutar Optimización"):
             grad_num = sp.lambdify(vars_sym, grad_sym, 'numpy')
             hessian_num = sp.lambdify(vars_sym, hessian_sym, 'numpy')
 
-            # Contadores de evaluaciones (dict mutable para evitar problema de scope)
             conteo = {"f": 0, "grad": 0, "hess": 0}
 
             def f_eval(x):
@@ -231,7 +230,6 @@ if st.button("🚀 Ejecutar Optimización"):
             iters_realizadas = 0
             error_final = 0.0
 
-            # --- INICIO CRONÓMETRO ---
             t_inicio = time.perf_counter()
 
             for k in range(max_iter):
@@ -239,9 +237,16 @@ if st.button("🚀 Ejecutar Optimización"):
                 f_k = f_eval(x_k)
                 error_actual = np.linalg.norm(g_k)
                 trayectoria_x.append(x_k.copy())
-                historial_datos.append({"Iteración": k, "x": x_k.copy(), "f(x)": f_k, "Error": error_actual})
 
                 if error_actual < tolerancia:
+                    # ✏️ CAMBIO 1: En la última iteración (convergencia) alpha es 0 porque no se da paso
+                    historial_datos.append({
+                        "Iteración": k,
+                        "x": x_k.copy(),
+                        "f(x)": f_k,
+                        "α (step size)": 0.0,
+                        "Error": error_actual
+                    })
                     error_final = error_actual
                     break
 
@@ -266,13 +271,21 @@ if st.button("🚀 Ejecutar Optimización"):
                 if alpha_k is None or alpha_k < alpha_min:
                     alpha_k = alpha_min
 
+                # ✏️ CAMBIO 2: Guardamos alpha_k junto con los demás datos de la iteración
+                historial_datos.append({
+                    "Iteración": k,
+                    "x": x_k.copy(),
+                    "f(x)": f_k,
+                    "α (step size)": alpha_k,
+                    "Error": error_actual
+                })
+
                 p_old = p_k
                 g_old = g_k
                 x_k = x_k + alpha_k * p_k
                 iters_realizadas += 1
                 error_final = error_actual
 
-            # --- FIN CRONÓMETRO ---
             t_fin = time.perf_counter()
             tiempo_total = t_fin - t_inicio
             tiempo_por_iter = tiempo_total / iters_realizadas if iters_realizadas > 0 else 0.0
@@ -461,11 +474,17 @@ if st.button("🚀 Ejecutar Optimización"):
         for i in range(num_vars):
             df_historial[f"x{i+1}"] = df_historial["x"].apply(lambda coord: coord[i])
         df_historial = df_historial.drop(columns=["x"])
+
+        # ✏️ CAMBIO 3: Reordenamos columnas para que α quede entre f(x) y Error
+        cols_x = [f"x{i+1}" for i in range(num_vars)]
+        df_historial = df_historial[["Iteración"] + cols_x + ["f(x)", "α (step size)", "Error"]]
+
         tabla_filtrada = df_historial[
             (df_historial["Iteración"] >= min_iter_visual) &
             (df_historial["Iteración"] <= max_iter_visual)
         ]
         st.dataframe(tabla_filtrada, hide_index=True, use_container_width=True)
+        st.caption("ℹ️ α = 0.0 en la última fila indica que el algoritmo convergió y no se ejecutó ningún paso adicional.")
 
     except Exception as e:
         st.error(f"Ocurrió un error matemático o de sintaxis: {e}")
